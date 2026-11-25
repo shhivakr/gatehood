@@ -21,7 +21,6 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="join" />
           <Stack.Screen name="builder-login" />
-          <Stack.Screen name="explore" />
         </Stack.Protected>
       </Stack>
       {!ready && (

@@ -2,6 +2,8 @@
 
 Gatehood is a mobile app for residential construction projects that replaces noisy group chats with targeted project updates per tower and unit, and gives the builder visibility into which buyers have joined and read each notice. Built with Expo (React Native), TypeScript, Expo Router, and the Firebase JS SDK so it runs directly in Expo Go on iOS and Android on the Firebase Spark plan.
 
+**Submission:** [Design note](NOTE.md) · [Demo video](PASTE-VIDEO-LINK-HERE)
+
 ## Features
 
 ### Builder
@@ -28,7 +30,7 @@ Gatehood is a mobile app for residential construction projects that replaces noi
 
 ## Prerequisites
 
-- Node.js (tested on Node 26; Node 20 LTS or newer recommended)
+- Node.js 20 LTS or newer
 - A Firebase account (Spark plan is sufficient)
 - Firebase CLI (`npm install -g firebase-tools`, or run via `npx firebase`)
 - **Expo Go** installed on an Android or iOS phone (matching Expo SDK 58)
@@ -67,7 +69,7 @@ EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=000000000000
 
 ### 3. Create the builder account
 
-1. In **Authentication -> Users -> Add user**, create an Email/Password user for the builder.
+1. In **Authentication -> Users -> Add user**, create an Email/Password user for the builder. Any email and password works; remember them for the builder login.
 2. Copy the new user's **User UID** (you will pass this as `BUILDER_UID` when running the seed script so it writes `admins/<uid>`).
 
 ### 4. Deploy Firestore rules and indexes
@@ -103,6 +105,8 @@ npm run seed
 GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json FIREBASE_PROJECT_ID=your-project-id BUILDER_UID=paste-uid-here npm run seed
 ```
 
+> Run the seed once. Running it again adds another set of invites and notices rather than replacing the first. To start over, delete the `invites` and `notices` collections in the Firebase console first.
+
 When finished, the script prints the number of seeded documents along with three sample invite codes (`Expired`, `Used`, and `Valid`).
 
 ### 6. Start Expo and open in Expo Go
@@ -120,25 +124,21 @@ Scan the QR code with **Expo Go** on Android or the Camera app on iOS.
   - `Expired: <code>` (`expiresAt` set 1 day in the past)
   - `Used: <code>` (`claimedBy` already set)
   - `Valid: <code>` (valid for 30 days)
-- **Sample `buyers.csv` for builder CSV import:** Create a CSV file on your phone/cloud drive with columns `tower,unit,name,phone,config` (`config` is optional and defaults to `3BHK`):
-
-```csv
-tower,unit,name,phone,config
-D,101,Aarav,9810000001,2BHK
-D,102,Diya,9810000002,3BHK
-E,201,Rohan,9810000003,
-```
+- Each invite code works once. The `Valid` code printed by the seed is used up after one join, so pick any other unused code from the builder's **Buyers** tab (Tower A, B or C) for additional buyers.
+- **Sample import file:** `sample-data/buyers.csv` (columns `tower,unit,name,phone,config`; `config` is optional and defaults to `3BHK`).
 
 ## How to Test
 
+Sample import file: `sample-data/buyers.csv`
+
 ### Builder flow
 1. Tap **I'm the builder** and sign in with your builder email and password.
-2. In **Buyers**, tap **Import buyers CSV**, select your `buyers.csv`, and verify the new tower/unit rows appear and can be shared via the share button.
+2. In **Buyers**, tap **Import buyers CSV**, select `sample-data/buyers.csv`, and verify the new tower/unit rows appear and can be shared via the share button.
 3. In **Post**, create a notice for **Whole project**, **Towers**, or **Units**, optionally toggle **Pin this notice**, and tap **Post notice**.
 4. In **Notices**, verify the notice appears, tap it to expand unread buyers, and test **Pin to top** / **Unpin**.
 
 ### Buyer flow
-1. Sign out of the builder account (or open on a second device) and tap **I'm a buyer: join with code**.
+1. Tap **Sign out** in the builder app, then tap **I'm a buyer: join with code** (or open the app on a second device).
 2. Enter the **Expired** code printed by the seed script, then the **Used** code, then an invalid code (e.g. `A999-ZZZ`) to verify the validation messages.
 3. Enter the **Valid** code and tap **Join**.
 4. Check **My Unit** for unit, tower, configuration, tower progress %, and days to possession.
@@ -217,6 +217,6 @@ Summarised from `firestore.rules`:
 
 ## Troubleshooting
 
-- **`Missing or insufficient permissions` on buyer join or feed:** Verify `npx firebase deploy --only firestore` succeeded on the same project ID configured in `.env`, that the composite indexes in Firebase Console (**Firestore Database -> Indexes**) show **Enabled** (not **Building**), and that `buyers/<uid>` does not already exist for a previously tested anonymous UID.
+- **`Missing or insufficient permissions` on buyer join or feed:** Verify `npx firebase deploy --only firestore` succeeded on the same project ID configured in `.env`, that the composite indexes in Firebase Console (**Firestore Database -> Indexes**) show **Enabled** (not **Building**), and that `buyers/<uid>` does not already exist for a previously tested anonymous UID. Right after the first deploy the feed can show an error for a few minutes until the composite index finishes building.
 - **`Component auth has not been registered yet`:** Ensure `@firebase/*` packages are deduplicated (`npm dedupe`) and restart Metro cleanly with `npx expo start -c`. Use Expo Go on Android or iOS as the primary runtime.
 - **`.env` changes do not take effect:** Expo inlines `EXPO_PUBLIC_*` environment variables at bundle time; restart Metro with `npx expo start -c` after editing `.env`.
