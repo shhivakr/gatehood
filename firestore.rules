@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(db)/documents/admins/$(request.auth.uid));
+    }
+    function isBuyer() {
+      return signedIn() && exists(/databases/$(db)/documents/buyers/$(request.auth.uid));
+    }
+    function buyer() {
+      return get(/databases/$(db)/documents/buyers/$(request.auth.uid)).data;
+    }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /projects/{pid} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Invites: lookup by code only; buyers cannot list them.
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.claimedBy == null
+        && resource.data.expiresAt > request.time
+        && request.resource.data.claimedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy', 'claimedAt'])
+      );
+    }
+
+    // Tower/unit come from the invite, never from the client.
+    match /buyers/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid
+        && getAfter(/databases/$(db)/documents/invites/$(request.resource.data.inviteCode)).data.claimedBy == uid
+        && request.resource.data.tower == getAfter(/databases/$(db)/documents/invites/$(request.resource.data.inviteCode)).data.tower
+        && request.resource.data.unit  == getAfter(/databases/$(db)/documents/invites/$(request.resource.data.inviteCode)).data.unit;
+      allow update, delete: if isAdmin();
+
+      match /reads/{nid} {
+        allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+        allow create: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    match /notices/{nid} {
+      allow write: if isAdmin();
+      allow read: if isAdmin() || (isBuyer() && resource.data.audienceKeys.hasAny([
+        'all',
+        'tower:' + buyer().tower,
+        'unit:' + buyer().tower + '-' + buyer().unit
+      ]));
+
+      // One doc per buyer, so a read is idempotent.
+      match /reads/{uid} {
+        allow create: if signedIn() && request.auth.uid == uid && isBuyer();
+        allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      }
+    }
+  }
+}
