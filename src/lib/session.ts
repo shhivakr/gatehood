@@ -45,17 +45,26 @@ async function resolve(user: User | null) {
   return { uid: user.uid, role: "none" as Role, buyer: null };
 }
 
-export const useSession = create<Session>()((set) => ({
+let resolveSeq = 0;
+
+async function sync(user: User | null) {
+  const id = ++resolveSeq;
+  const next = await resolve(user);
+  if (id === resolveSeq) {
+    useSession.setState({ ...next, ready: true });
+  }
+}
+
+export const useSession = create<Session>()(() => ({
   ready: false,
   uid: null,
   role: "none",
   buyer: null,
-  refresh: async () =>
-    set({ ...(await resolve(auth.currentUser)), ready: true }),
+  refresh: () => sync(auth.currentUser),
 }));
 
 export function startSessionListener() {
-  return onAuthStateChanged(auth, async (user) => {
-    useSession.setState({ ...(await resolve(user)), ready: true });
+  return onAuthStateChanged(auth, (user) => {
+    void sync(user);
   });
 }
