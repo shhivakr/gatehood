@@ -2,7 +2,7 @@
 
 Gatehood is a mobile app for residential construction projects that replaces noisy group chats with targeted project updates per tower and unit, and gives the builder visibility into which buyers have joined and read each notice. Built with Expo (React Native), TypeScript, Expo Router, and the Firebase JS SDK so it runs directly in Expo Go on iOS and Android on the Firebase Spark plan.
 
-**Submission:** [Design note](NOTE.md) · [Demo video](PASTE-VIDEO-LINK-HERE)
+**Submission:** [Design note](NOTE.md) · [Demo video](https://drive.google.com/file/d/16jpDyjt5d3tM8ya855hD7kdpi5mFL8cM/view?usp=drive_link)
 
 ## Features
 
